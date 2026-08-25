@@ -204,4 +204,87 @@ export function useClaimChart() {
     const confirmMsg: ChatMessage = {
       id: `confirm-${Date.now()}`,
       role: 'ai',
-      content: '✓ Claim Chart updated for **Element 3**. Evidence strength remains **Indirect / Inferred** as requir
+      content: '✓ Claim Chart updated for **Element 3**. Evidence strength remains **Indirect / Inferred** as required by your guidelines.',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setChatMessages((prev) => [...prev, confirmMsg]);
+  }, [chatMessages, pushToHistory]);
+
+  // B. Analyst Action: Edit & Accept Custom Refinement
+  const editRefinement = useCallback((messageId: string, customReasoning: string) => {
+    const targetMessage = chatMessages.find((m) => m.id === messageId);
+    if (!targetMessage || !targetMessage.proposal) return;
+
+    pushToHistory();
+
+    const { evidence, strength } = targetMessage.proposal;
+
+    setClaimElements((prev) =>
+      prev.map((el) => {
+        if (el.id === 'element-3') {
+          return {
+            ...el,
+            reasoning: customReasoning,
+            evidence: evidence,
+            evidenceStrength: strength,
+            isUpdated: true,
+            version: el.version + 1,
+          };
+        }
+        return el;
+      })
+    );
+
+    setChatMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, status: 'edited' as const } : m))
+    );
+
+    const confirmMsg: ChatMessage = {
+      id: `confirm-edit-${Date.now()}`,
+      role: 'ai',
+      content: '✓ Claim Chart updated for **Element 3** with your custom edited reasoning.',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setChatMessages((prev) => [...prev, confirmMsg]);
+  }, [chatMessages, pushToHistory]);
+
+  // Analyst Action: Reject Suggestion
+  const rejectRefinement = useCallback((messageId: string) => {
+    setChatMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, status: 'rejected' as const } : m))
+    );
+  }, []);
+
+  // Export Simulation
+  const exportToWord = useCallback(() => {
+    setIsExporting(true);
+    setTimeout(() => {
+      setIsExporting(false);
+      setExportNotification('US123456_Claim_Chart_Refined.docx generated successfully.');
+      setTimeout(() => setExportNotification(null), 4000);
+    }, 1200);
+  }, []);
+
+  return {
+    appStep,
+    setAppStep,
+    claimElements,
+    selectedElementId,
+    selectedElement,
+    selectElement,
+    chatMessages,
+    sendAnalystMessage,
+    acceptRefinement,
+    editRefinement,
+    rejectRefinement,
+    activeEvidence,
+    isViewerOpen,
+    openEvidence,
+    closeEvidence,
+    undoLastChange,
+    canUndo: history.length > 0,
+    isExporting,
+    exportNotification,
+    exportToWord,
+  };
+}
